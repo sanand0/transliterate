@@ -8,26 +8,35 @@
 
 */
 
-var transliterate = function(node, lang) {
+var transliterate = function(node, fn, lang) {
     if (node) {
-        lang = lang || transliterate.parentLang(node);
+        if (typeof fn != "function") {                      // If function is not specified, replace content with transliteration
+            lang = fn;
+            fn = transliterate.fn.replace;
+        }
+        lang = lang || transliterate.parentLang(node);      // If language is not specified, use the parent's lang
         lang = lang.substr(0,2).toLowerCase();              // First two letters contain the main language
         var type = node.nodeType;
         if (type == 3) {                                    // Replace only text nodes
             var trans = transliterate.lang[lang];           // Store transliterators in transliterate.lang['ta'], transliterate.lang['sa'], etc.
             if (typeof trans == "function") { try {
-                node.nodeValue = trans(node.nodeValue);
+                fn(node, trans(node.nodeValue));
             } catch(e) { } }                                // Ignore exceptions
         }
         else {                                              // Walk through the children of all other nodes
             var children = node.childNodes;
             for (var i=0, l=children.length; i<l; i++) {
-                var newnode = children[i];
-                var newlang = newnode.lang || lang;
-                transliterate(newnode, newlang);
+                var newnode = children[i],
+                    newlang = newnode.lang || lang;
+                transliterate(newnode, fn, newlang);
             }
         }
     }
+};
+
+transliterate.fn = {
+    replace:  function(node, value) { node.nodeValue  = value; return node; },
+    append:   function(node, value) { node.parentNode.innerHTML += "<br>" + value; return node; }
 };
 
 transliterate.parentLang = function(node) {
